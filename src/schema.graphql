@@ -1,4 +1,10 @@
 # noinspection GraphQLTypeRedefinition
+schema {
+    query: Query
+    mutation: Mutation
+    subscription: Subscription
+}
+
 type Message {
     id: ID!
     message: String
@@ -16,4 +22,5 @@ type Mutation {
 
 type Subscription {
     updateMessage: Message
+    messagePruned: Int!
 }

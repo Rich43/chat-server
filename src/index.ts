@@ -10,23 +10,18 @@ import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/lib/use/ws';
 import express from 'express';
 import cors from 'cors';
+import bodyParser from 'body-parser';
 import { expressMiddleware } from "@apollo/server/express4";
+import { PubSub } from 'graphql-subscriptions-continued';
+
+const PORT = 4000;
+const MESSAGE_UPDATED = 'MESSAGE_UPDATED';
+
+const pubSub = new PubSub();
 
 const typeDefs = readFileSync('./src/schema.graphql', { encoding: 'utf-8' });
 
 const messages: Message[] = [
-    {
-        id: "1",
-        message: 'The Awakening',
-        created: new Date().toISOString(),
-        session: 123,
-    },
-    {
-        id: "2",
-        message: 'City of Glass',
-        created: new Date().toISOString(),
-        session: 123,
-    },
 ];
 
 const resolvers: Resolvers = {
@@ -53,30 +48,34 @@ const resolvers: Resolvers = {
                 session: args.session,
             };
             messages.push(newMessage);
+            pubSub.publish(MESSAGE_UPDATED, {updateMessage: newMessage}).then(r => ({}));
             return newMessage;
         },
-    }
+    },
+    Subscription: {
+        updateMessage: {
+            subscribe: () => pubSub.asyncIterator([MESSAGE_UPDATED]),
+        },
+    },
 };
+
+const schema = makeExecutableSchema({ typeDefs, resolvers });
 
 const app = express();
 const httpServer = createServer(app);
 
 const wsServer = new WebSocketServer({
     server: httpServer,
-    path: '/subscriptions',
+    path: '/graphql',
 });
-
-const schema = makeExecutableSchema({ typeDefs, resolvers });
 
 const serverCleanup = useServer({ schema }, wsServer);
 
 const server = new ApolloServer({
     schema,
     plugins: [
-        // Proper shutdown for the HTTP server.
         ApolloServerPluginDrainHttpServer({ httpServer }),
 
-        // Proper shutdown for the WebSocket server.
         {
             async serverWillStart() {
                 return {
@@ -90,7 +89,9 @@ const server = new ApolloServer({
 });
 
 await server.start();
+app.use('/graphql', cors<cors.CorsRequest>(), bodyParser.json(), expressMiddleware(server));
 
-app.use('/graphql', cors<cors.CorsRequest>(), express.json(), expressMiddleware(server));
-
-console.log(`🚀  Server ready at: http://localhost:4000/`);
+httpServer.listen(PORT, () => {
+    console.log(`🚀 Query endpoint ready at http://localhost:${PORT}/graphql`);
+    console.log(`🚀 Subscription endpoint ready at ws://localhost:${PORT}/graphql`);
+});
