@@ -1,9 +1,16 @@
 // noinspection GraphQLTypeRedefinition
 
 import { ApolloServer } from '@apollo/server';
-import { startStandaloneServer } from '@apollo/server/standalone';
 import { readFileSync } from "fs";
 import { Message, Resolvers } from "./generated/graphql";
+import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
+import { createServer } from 'http';
+import { makeExecutableSchema } from '@graphql-tools/schema';
+import { WebSocketServer } from 'ws';
+import { useServer } from 'graphql-ws/lib/use/ws';
+import express from 'express';
+import cors from 'cors';
+import { expressMiddleware } from "@apollo/server/express4";
 
 const typeDefs = readFileSync('./src/schema.graphql', { encoding: 'utf-8' });
 
@@ -51,13 +58,39 @@ const resolvers: Resolvers = {
     }
 };
 
+const app = express();
+const httpServer = createServer(app);
+
+const wsServer = new WebSocketServer({
+    server: httpServer,
+    path: '/subscriptions',
+});
+
+const schema = makeExecutableSchema({ typeDefs, resolvers });
+
+const serverCleanup = useServer({ schema }, wsServer);
+
 const server = new ApolloServer({
-    typeDefs,
-    resolvers,
+    schema,
+    plugins: [
+        // Proper shutdown for the HTTP server.
+        ApolloServerPluginDrainHttpServer({ httpServer }),
+
+        // Proper shutdown for the WebSocket server.
+        {
+            async serverWillStart() {
+                return {
+                    async drainServer() {
+                        await serverCleanup.dispose();
+                    },
+                };
+            },
+        },
+    ],
 });
 
-const { url } = await startStandaloneServer(server, {
-    listen: { port: 4000 },
-});
+await server.start();
 
-console.log(`🚀  Server ready at: ${url}`);
+app.use('/graphql', cors<cors.CorsRequest>(), express.json(), expressMiddleware(server));
+
+console.log(`🚀  Server ready at: http://localhost:4000/`);
