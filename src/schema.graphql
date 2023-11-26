@@ -13,14 +13,14 @@ type Message {
 }
 
 type Query {
-    messages(session: Int!): [Message]
+    messages(session: Int!): [Message!]
 }
 
 type Mutation {
-    createMessage(session: Int!, message: String!): Message
+    createMessage(session: Int!, message: String!): Message!
 }
 
 type Subscription {
-    updateMessage: Message
+    updateMessage: Message!
     messagePruned: Int!
 }
