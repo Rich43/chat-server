@@ -43,7 +43,9 @@ const resolvers: Resolvers = {
                 session: args.session,
             };
             messages.push(newMessage);
-            return messages.filter((msg) => msg.session === args.session);
+            const msgs = messages.filter((msg) => msg.session === args.session);
+            pubSub.publish(MESSAGE_UPDATED, {updateMessage: msgs}).then(_r => {});
+            return msgs;
         },
     },
     Subscription: {
