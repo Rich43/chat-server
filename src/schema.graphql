@@ -22,5 +22,5 @@ type Mutation {
 
 type Subscription {
     updateMessage: Message!
-    messagePruned: Int!
+    messagePruned: [Message!]
 }

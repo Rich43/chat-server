@@ -112,7 +112,7 @@ function messagePruner() {
         const diff = now.getTime() - created.getTime();
         if (diff > PRUNE_TIME) {
             messages.splice(i, 1);
-            pubSub.publish(MESSAGE_PRUNED, {messagePruned: message.session}).then(_r => {});
+            pubSub.publish(MESSAGE_PRUNED, {messagePruned: messages.filter((msg) => msg.session === message.session)}).then(_r => {});
         } else {
             i++;
         }
