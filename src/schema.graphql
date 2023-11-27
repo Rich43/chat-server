@@ -17,10 +17,10 @@ type Query {
 }
 
 type Mutation {
-    createMessage(session: Int!, message: String!): Message!
+    createMessage(session: Int!, message: String!): [Message!]
 }
 
 type Subscription {
-    updateMessage: Message!
+    updateMessage: [Message!]
     messagePruned: [Message!]
 }

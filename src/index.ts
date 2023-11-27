@@ -30,16 +30,7 @@ const messages: Message[] = [
 const resolvers: Resolvers = {
     Query: {
         messages: (_parent, args) => {
-            const foundMessages = messages.filter((message) => message.session === args.session);
-            const msgs: Message[] = foundMessages.map((message) => {
-                return {
-                    id: message.id,
-                    message: message.message,
-                    created: message.created,
-                    session: message.session,
-                };
-            });
-            return msgs;
+            return messages.filter((message) => message.session === args.session);
         },
     },
     Mutation: {
@@ -52,8 +43,7 @@ const resolvers: Resolvers = {
                 session: args.session,
             };
             messages.push(newMessage);
-            pubSub.publish(MESSAGE_UPDATED, {updateMessage: newMessage}).then(_r => {});
-            return newMessage;
+            return messages.filter((msg) => msg.session === args.session);
         },
     },
     Subscription: {
